@@ -135,6 +135,3 @@ npm run reporte        # opens the HTML report
 
 > The tests create and delete products whose name starts with `ZZ`. Don't use that prefix for real data.
 
-## Author
-
-**[Your name]** · [Course / University] · [Year]
