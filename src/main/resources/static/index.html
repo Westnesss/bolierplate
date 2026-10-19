@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Catálogo de productos</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- BARRA SUPERIOR: marca + buscador + botón agregar -->
+  <header class="top">
+    <div class="top__inner">
+      <h1 class="brand">Catálogo</h1>
+
+      <form class="search" id="searchForm" role="search" autocomplete="off">
+        <div class="search__field">
+          <input
+            id="searchInput"
+            type="text"
+            placeholder="Busca un producto (mínimo 2 letras)"
+            aria-label="Buscar producto"
+            role="combobox"
+            aria-expanded="false"
+            aria-controls="suggestions"
+            aria-autocomplete="list">
+          <button type="submit" class="search__btn" aria-label="Buscar">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <circle cx="11" cy="11" r="7"></circle>
+              <path d="m20 20-3.5-3.5"></path>
+            </svg>
+          </button>
+        </div>
+        <ul id="suggestions" class="suggestions" role="listbox" hidden></ul>
+      </form>
+
+      <button type="button" class="btn btn--primary add" id="addBtn">Agregar producto</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- RESULTADO DE LA BÚSQUEDA (aparece al presionar la lupa) -->
+    <section id="resultsSection" class="block block--results" hidden aria-live="polite">
+      <div class="block__head">
+        <h2 id="resultsTitle"></h2>
+        <button type="button" class="btn btn--ghost" id="clearSearch">Limpiar búsqueda</button>
+      </div>
+      <div id="resultsGrid" class="grid"></div>
+    </section>
+
+    <!-- TODOS LOS PRODUCTOS DE LA BASE DE DATOS -->
+    <section class="block">
+      <div class="block__head">
+        <h2>Todos los productos</h2>
+        <span id="count" class="muted"></span>
+      </div>
+      <div id="status" class="status" role="status"></div>
+      <div id="grid" class="grid"></div>
+    </section>
+  </main>
+
+  <!-- FORMULARIO CREAR / EDITAR -->
+  <dialog id="formDialog" aria-labelledby="formTitle">
+    <form id="productForm" class="form">
+      <h2 id="formTitle">Agregar producto</h2>
+
+      <label for="fNombre">Nombre</label>
+      <input id="fNombre" name="nombre" type="text" required maxlength="120">
+
+      <label for="fDescripcion">Descripción</label>
+      <textarea id="fDescripcion" name="descripcion" rows="3" maxlength="255"></textarea>
+
+      <div class="form__row">
+        <div>
+          <label for="fPrecio">Precio (USD)</label>
+          <input id="fPrecio" name="precio" type="number" min="0" step="0.01" required>
+        </div>
+        <div>
+          <label for="fStock">Stock</label>
+          <input id="fStock" name="stock" type="number" min="0" step="1" required>
+        </div>
+      </div>
+
+      <div class="form__actions">
+        <button type="button" class="btn btn--ghost" id="cancelBtn">Cancelar</button>
+        <button type="submit" class="btn btn--primary">Guardar producto</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
