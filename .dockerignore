@@ -1,0 +1,10 @@
+.git
+.idea
+.vscode
+target
+e2e-tests
+database
+docker-compose*.yml
+Dockerfile*
+.env
+*.md
