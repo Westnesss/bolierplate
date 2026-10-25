@@ -1,49 +1,44 @@
 package com.boilerplate.uce.service;
 
-import com.boilerplate.uce.model.Producto;
-import com.boilerplate.uce.repository.ProductoRepository;
+import com.boilerplate.uce.model.Product;
+import com.boilerplate.uce.repository.ProductRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
 
 @Service
-public class ProductoService {
+public class ProductService {
 
-    private final ProductoRepository repository;
+    private final ProductRepository repository;
 
-    public ProductoService(ProductoRepository repository) {
+    public ProductService(ProductRepository repository) {
         this.repository = repository;
     }
 
-    // CREATE
-    public Producto crear(Producto producto) {
-        return repository.save(producto);
+    public Product create(Product product) {
+        return repository.save(product);
     }
 
-    // READ (todos)
-    public List<Producto> listar() {
+    public List<Product> findAll() {
         return repository.findAll();
     }
 
-    // READ (uno)
-    public Optional<Producto> buscarPorId(Long id) {
+    public Optional<Product> findById(Long id) {
         return repository.findById(id);
     }
 
-    // UPDATE
-    public Optional<Producto> actualizar(Long id, Producto datos) {
-        return repository.findById(id).map(existente -> {
-            existente.setNombre(datos.getNombre());
-            existente.setDescripcion(datos.getDescripcion());
-            existente.setPrecio(datos.getPrecio());
-            existente.setStock(datos.getStock());
-            return repository.save(existente);
+    public Optional<Product> update(Long id, Product data) {
+        return repository.findById(id).map(existing -> {
+            existing.setName(data.getName());
+            existing.setDescription(data.getDescription());
+            existing.setPrice(data.getPrice());
+            existing.setStock(data.getStock());
+            return repository.save(existing);
         });
     }
 
-    // DELETE
-    public boolean eliminar(Long id) {
+    public boolean delete(Long id) {
         if (repository.existsById(id)) {
             repository.deleteById(id);
             return true;

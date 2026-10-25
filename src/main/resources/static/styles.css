@@ -39,7 +39,7 @@ h1, h2, h3 {
 
 .muted { color: var(--muted); }
 
-/* ---------- Barra superior ---------- */
+/* ---------- Header ---------- */
 .top {
   position: sticky;
   top: 0;
@@ -107,7 +107,7 @@ h1, h2, h3 {
 
 .search__btn:hover { background: #095a63; }
 
-/* ---------- Sugerencias ---------- */
+/* ---------- Suggestions ---------- */
 .suggestions {
   position: absolute;
   top: calc(100% + 6px);
@@ -146,7 +146,7 @@ h1, h2, h3 {
 
 .suggestions__price { color: var(--muted); white-space: nowrap; }
 
-/* ---------- Botones ---------- */
+/* ---------- Buttons ---------- */
 .btn {
   font: 500 0.95rem var(--font-body);
   padding: 10px 16px;
@@ -164,7 +164,7 @@ h1, h2, h3 {
 .btn--danger { background: transparent; border-color: var(--line); color: var(--danger); }
 .btn--danger:hover { background: #fbeceb; border-color: var(--danger); }
 
-/* ---------- Contenido ---------- */
+/* ---------- Content ---------- */
 main {
   max-width: 1200px;
   margin: 0 auto;
@@ -199,7 +199,7 @@ main {
   padding: 12px 16px;
 }
 
-/* ---------- Tarjetas ---------- */
+/* ---------- Cards ---------- */
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr));
@@ -244,7 +244,7 @@ main {
   padding: 8px 0;
 }
 
-/* ---------- Formulario (dialog) ---------- */
+/* ---------- Form dialog ---------- */
 dialog {
   width: min(480px, calc(100% - 32px));
   border: 0;
@@ -291,7 +291,7 @@ dialog::backdrop { background: rgba(20, 35, 43, 0.5); }
   margin-top: 16px;
 }
 
-/* ---------- Aviso ---------- */
+/* ---------- Toast ---------- */
 .toast {
   position: fixed;
   left: 50%;
@@ -310,7 +310,7 @@ dialog::backdrop { background: rgba(20, 35, 43, 0.5); }
 .toast.is-visible { opacity: 1; transform: translate(-50%, 0); }
 .toast.is-error { background: var(--danger); }
 
-/* ---------- Pantallas más grandes ---------- */
+/* ---------- Larger screens ---------- */
 @media (min-width: 420px) {
   .form__row { grid-template-columns: 1fr 1fr; }
 }
