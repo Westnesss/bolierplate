@@ -1,17 +1,14 @@
-// ============================================================
-//  Configuración: cambia esta URL si tu backend usa otro puerto
-// ============================================================
-const API_URL = "/api/productos";
+const API_URL = "/api/products";
 
-// ---------------- Estado ----------------
-let productos = [];        // copia local de lo que hay en la base de datos
-let consultaActiva = "";   // texto de la búsqueda aplicada con la lupa
-let sugerencias = [];      // coincidencias mostradas en el desplegable
-let indiceActivo = -1;     // sugerencia resaltada con el teclado
-let editandoId = null;     // null = creando, número = editando
-let errorConexion = false;
+// ---------------- State ----------------
+let products = [];
+let activeQuery = "";
+let suggestions = [];
+let activeIndex = -1;
+let editingId = null; // null = creating, number = editing
+let connectionError = false;
 
-// ---------------- Elementos del DOM ----------------
+// ---------------- DOM elements ----------------
 const $ = (id) => document.getElementById(id);
 const el = {
   form: $("searchForm"),
@@ -29,18 +26,16 @@ const el = {
   productForm: $("productForm"),
   formTitle: $("formTitle"),
   cancelBtn: $("cancelBtn"),
-  fNombre: $("fNombre"),
-  fDescripcion: $("fDescripcion"),
-  fPrecio: $("fPrecio"),
+  fName: $("fName"),
+  fDescription: $("fDescription"),
+  fPrice: $("fPrice"),
   fStock: $("fStock"),
   toast: $("toast"),
 };
 
-const dinero = new Intl.NumberFormat("es-EC", { style: "currency", currency: "USD" });
+const currency = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 
-// ============================================================
-//  Comunicación con el backend (los 4 métodos CRUD)
-// ============================================================
+// ---------------- API ----------------
 async function api(path = "", options = {}) {
   const res = await fetch(API_URL + path, {
     headers: { "Content-Type": "application/json" },
@@ -50,162 +45,157 @@ async function api(path = "", options = {}) {
   return res.status === 204 ? null : res.json();
 }
 
-async function cargarProductos() {
-  mostrarEstado("Cargando productos…");
+async function loadProducts() {
+  showStatus("Loading products…");
   try {
-    productos = await api();            // GET /api/productos
-    errorConexion = false;
+    products = await api();
+    connectionError = false;
   } catch (err) {
-    productos = [];
-    errorConexion = true;
+    products = [];
+    connectionError = true;
   }
-  renderTodo();
+  renderAll();
 }
 
-// ============================================================
-//  Render
-// ============================================================
-function mostrarEstado(texto, esError = false) {
-  el.status.textContent = texto;
-  el.status.classList.toggle("status--error", esError);
+// ---------------- Rendering ----------------
+function showStatus(text, isError = false) {
+  el.status.textContent = text;
+  el.status.classList.toggle("status--error", isError);
 }
 
-function renderTodo() {
-  renderTarjetas(el.grid, productos);
+function renderAll() {
+  renderCards(el.grid, products);
 
-  el.count.textContent = productos.length
-    ? `${productos.length} ${productos.length === 1 ? "producto" : "productos"}`
+  el.count.textContent = products.length
+    ? `${products.length} ${products.length === 1 ? "product" : "products"}`
     : "";
 
-  if (errorConexion) {
-    mostrarEstado(`No se pudo conectar con el backend en ${API_URL}. Verifica que Spring Boot esté corriendo.`, true);
-  } else if (!productos.length) {
-    mostrarEstado("Aún no hay productos. Usa “Agregar producto” para crear el primero.");
+  if (connectionError) {
+    showStatus(`Could not reach the backend at ${API_URL}. Make sure Spring Boot is running.`, true);
+  } else if (!products.length) {
+    showStatus("No products yet. Use “Add product” to create the first one.");
   } else {
-    mostrarEstado("");
+    showStatus("");
   }
 
-  if (consultaActiva) renderResultados();
+  if (activeQuery) renderResults();
 }
 
-function renderTarjetas(contenedor, lista) {
-  contenedor.replaceChildren(...lista.map(crearTarjeta));
+function renderCards(container, list) {
+  container.replaceChildren(...list.map(createCard));
 }
 
-function crearTarjeta(p) {
+function createCard(p) {
   const card = document.createElement("article");
   card.className = "card";
 
-  const titulo = document.createElement("h3");
-  titulo.textContent = p.nombre;
+  const title = document.createElement("h3");
+  title.textContent = p.name;
 
-  const desc = document.createElement("p");
-  desc.className = "card__desc";
-  desc.textContent = p.descripcion || "Sin descripción";
+  const description = document.createElement("p");
+  description.className = "card__desc";
+  description.textContent = p.description || "No description";
 
-  const precio = document.createElement("div");
-  precio.className = "card__price";
-  precio.textContent = p.precio != null ? dinero.format(p.precio) : "—";
+  const price = document.createElement("div");
+  price.className = "card__price";
+  price.textContent = p.price != null ? currency.format(p.price) : "—";
 
   const stock = document.createElement("div");
-  const hayStock = (p.stock ?? 0) > 0;
-  stock.className = "card__stock" + (hayStock ? "" : " card__stock--out");
-  stock.textContent = hayStock ? `${p.stock} en stock` : "Agotado";
+  const inStock = (p.stock ?? 0) > 0;
+  stock.className = "card__stock" + (inStock ? "" : " card__stock--out");
+  stock.textContent = inStock ? `${p.stock} in stock` : "Out of stock";
 
-  const acciones = document.createElement("div");
-  acciones.className = "card__actions";
+  const actions = document.createElement("div");
+  actions.className = "card__actions";
 
-  const btnEditar = document.createElement("button");
-  btnEditar.type = "button";
-  btnEditar.className = "btn btn--ghost";
-  btnEditar.textContent = "Editar";
-  btnEditar.addEventListener("click", () => abrirFormulario(p));
+  const editBtn = document.createElement("button");
+  editBtn.type = "button";
+  editBtn.className = "btn btn--ghost";
+  editBtn.textContent = "Edit";
+  editBtn.addEventListener("click", () => openForm(p));
 
-  const btnEliminar = document.createElement("button");
-  btnEliminar.type = "button";
-  btnEliminar.className = "btn btn--danger";
-  btnEliminar.textContent = "Eliminar";
-  btnEliminar.addEventListener("click", () => eliminarProducto(p));
+  const deleteBtn = document.createElement("button");
+  deleteBtn.type = "button";
+  deleteBtn.className = "btn btn--danger";
+  deleteBtn.textContent = "Delete";
+  deleteBtn.addEventListener("click", () => deleteProduct(p));
 
-  acciones.append(btnEditar, btnEliminar);
-  card.append(titulo, desc, precio, stock, acciones);
+  actions.append(editBtn, deleteBtn);
+  card.append(title, description, price, stock, actions);
   return card;
 }
 
-// ============================================================
-//  Búsqueda
-// ============================================================
-// Quita tildes y mayúsculas para que "camara" encuentre "Cámara"
-function normalizar(texto) {
-  return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+// ---------------- Search ----------------
+// Strips accents and case so "camara" matches "Cámara".
+function normalize(text) {
+  return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 }
 
-// Primero los que EMPIEZAN con el texto, luego los que lo CONTIENEN
-function buscarCoincidencias(texto, minimo = 2) {
-  const q = normalizar(texto);
-  if (q.length < minimo) return [];
-  const empiezan = [];
-  const contienen = [];
-  for (const p of productos) {
-    const nombre = normalizar(p.nombre || "");
-    if (nombre.startsWith(q)) empiezan.push(p);
-    else if (nombre.includes(q)) contienen.push(p);
+// Prefix matches are listed before substring matches.
+function findMatches(text, minLength = 2) {
+  const q = normalize(text);
+  if (q.length < minLength) return [];
+  const startsWith = [];
+  const contains = [];
+  for (const p of products) {
+    const name = normalize(p.name || "");
+    if (name.startsWith(q)) startsWith.push(p);
+    else if (name.includes(q)) contains.push(p);
   }
-  return [...empiezan, ...contienen];
+  return [...startsWith, ...contains];
 }
 
-function resaltar(nombre, consulta) {
-  const frag = document.createDocumentFragment();
-  const q = normalizar(consulta);
-  const i = q ? normalizar(nombre).indexOf(q) : -1;
+function highlight(name, query) {
+  const fragment = document.createDocumentFragment();
+  const q = normalize(query);
+  const i = q ? normalize(name).indexOf(q) : -1;
   if (i < 0) {
-    frag.append(nombre);
-    return frag;
+    fragment.append(name);
+    return fragment;
   }
-  const marca = document.createElement("mark");
-  marca.textContent = nombre.slice(i, i + q.length);
-  frag.append(nombre.slice(0, i), marca, nombre.slice(i + q.length));
-  return frag;
+  const mark = document.createElement("mark");
+  mark.textContent = name.slice(i, i + q.length);
+  fragment.append(name.slice(0, i), mark, name.slice(i + q.length));
+  return fragment;
 }
 
-// ---- Sugerencias inmediatas mientras se escribe ----
-function actualizarSugerencias() {
-  const texto = el.input.value;
-  indiceActivo = -1;
+function updateSuggestions() {
+  const text = el.input.value;
+  activeIndex = -1;
   el.input.removeAttribute("aria-activedescendant");
 
-  if (texto.trim().length < 2) {
-    ocultarSugerencias();
+  if (text.trim().length < 2) {
+    hideSuggestions();
     return;
   }
 
-  sugerencias = buscarCoincidencias(texto).slice(0, 6);
+  suggestions = findMatches(text).slice(0, 6);
   el.suggestions.replaceChildren();
 
-  if (!sugerencias.length) {
-    const vacio = document.createElement("li");
-    vacio.className = "suggestions__empty";
-    vacio.textContent = "Sin coincidencias";
-    el.suggestions.append(vacio);
+  if (!suggestions.length) {
+    const empty = document.createElement("li");
+    empty.className = "suggestions__empty";
+    empty.textContent = "No matches";
+    el.suggestions.append(empty);
   } else {
-    sugerencias.forEach((p, i) => {
+    suggestions.forEach((p, i) => {
       const li = document.createElement("li");
       li.id = `sug-${i}`;
       li.className = "suggestions__item";
       li.setAttribute("role", "option");
 
-      const nombre = document.createElement("span");
-      nombre.append(resaltar(p.nombre, texto));
+      const name = document.createElement("span");
+      name.append(highlight(p.name, text));
 
-      const precio = document.createElement("span");
-      precio.className = "suggestions__price";
-      precio.textContent = p.precio != null ? dinero.format(p.precio) : "";
+      const price = document.createElement("span");
+      price.className = "suggestions__price";
+      price.textContent = p.price != null ? currency.format(p.price) : "";
 
-      li.append(nombre, precio);
-      // mousedown (y no click) para que el input no pierda el foco antes
+      li.append(name, price);
+      // mousedown instead of click so the input keeps focus.
       li.addEventListener("mousedown", (e) => {
         e.preventDefault();
-        elegirSugerencia(p);
+        selectSuggestion(p);
       });
       el.suggestions.append(li);
     });
@@ -215,150 +205,144 @@ function actualizarSugerencias() {
   el.input.setAttribute("aria-expanded", "true");
 }
 
-function ocultarSugerencias() {
+function hideSuggestions() {
   el.suggestions.hidden = true;
   el.input.setAttribute("aria-expanded", "false");
 }
 
-function moverSeleccion(paso) {
-  if (!sugerencias.length) return;
-  indiceActivo = (indiceActivo + paso + sugerencias.length) % sugerencias.length;
-  [...el.suggestions.children].forEach((li, i) => li.classList.toggle("is-active", i === indiceActivo));
-  el.input.setAttribute("aria-activedescendant", `sug-${indiceActivo}`);
+function moveSelection(step) {
+  if (!suggestions.length) return;
+  activeIndex = (activeIndex + step + suggestions.length) % suggestions.length;
+  [...el.suggestions.children].forEach((li, i) => li.classList.toggle("is-active", i === activeIndex));
+  el.input.setAttribute("aria-activedescendant", `sug-${activeIndex}`);
 }
 
-function elegirSugerencia(p) {
-  el.input.value = p.nombre;
-  buscar();
+function selectSuggestion(p) {
+  el.input.value = p.name;
+  search();
 }
 
-// ---- Resultado al presionar la lupa ----
-function buscar() {
-  consultaActiva = el.input.value.trim();
-  ocultarSugerencias();
-  if (!consultaActiva) {
-    limpiarBusqueda();
+function search() {
+  activeQuery = el.input.value.trim();
+  hideSuggestions();
+  if (!activeQuery) {
+    clearSearch();
     return;
   }
-  renderResultados();
+  renderResults();
   el.resultsSection.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-function renderResultados() {
-  const coincidencias = buscarCoincidencias(consultaActiva, 1);
+function renderResults() {
+  const matches = findMatches(activeQuery, 1);
   el.resultsSection.hidden = false;
-  el.resultsTitle.textContent = coincidencias.length
-    ? `Resultados para “${consultaActiva}” (${coincidencias.length})`
-    : `Resultados para “${consultaActiva}”`;
+  el.resultsTitle.textContent = matches.length
+    ? `Results for “${activeQuery}” (${matches.length})`
+    : `Results for “${activeQuery}”`;
 
-  if (!coincidencias.length) {
-    const msg = document.createElement("p");
-    msg.className = "empty";
-    msg.textContent = "No encontramos productos con ese nombre. Revisa la ortografía o prueba con otras letras.";
-    el.resultsGrid.replaceChildren(msg);
+  if (!matches.length) {
+    const message = document.createElement("p");
+    message.className = "empty";
+    message.textContent = "No products found with that name. Check the spelling or try different letters.";
+    el.resultsGrid.replaceChildren(message);
   } else {
-    renderTarjetas(el.resultsGrid, coincidencias);
+    renderCards(el.resultsGrid, matches);
   }
 }
 
-function limpiarBusqueda() {
-  consultaActiva = "";
+function clearSearch() {
+  activeQuery = "";
   el.input.value = "";
   el.resultsSection.hidden = true;
   el.resultsGrid.replaceChildren();
-  ocultarSugerencias();
+  hideSuggestions();
 }
 
-// ============================================================
-//  Crear / Editar / Eliminar
-// ============================================================
-function abrirFormulario(producto = null) {
-  editandoId = producto ? producto.id : null;
-  el.formTitle.textContent = producto ? "Editar producto" : "Agregar producto";
-  el.fNombre.value = producto?.nombre ?? "";
-  el.fDescripcion.value = producto?.descripcion ?? "";
-  el.fPrecio.value = producto?.precio ?? "";
-  el.fStock.value = producto?.stock ?? "";
+// ---------------- Create / update / delete ----------------
+function openForm(product = null) {
+  editingId = product ? product.id : null;
+  el.formTitle.textContent = product ? "Edit product" : "Add product";
+  el.fName.value = product?.name ?? "";
+  el.fDescription.value = product?.description ?? "";
+  el.fPrice.value = product?.price ?? "";
+  el.fStock.value = product?.stock ?? "";
   el.dialog.showModal();
-  el.fNombre.focus();
+  el.fName.focus();
 }
 
-async function guardarProducto(e) {
+async function saveProduct(e) {
   e.preventDefault();
-  const datos = {
-    nombre: el.fNombre.value.trim(),
-    descripcion: el.fDescripcion.value.trim(),
-    precio: parseFloat(el.fPrecio.value),
+  const data = {
+    name: el.fName.value.trim(),
+    description: el.fDescription.value.trim(),
+    price: parseFloat(el.fPrice.value),
     stock: parseInt(el.fStock.value, 10),
   };
 
   try {
-    if (editandoId !== null) {
-      await api(`/${editandoId}`, { method: "PUT", body: JSON.stringify(datos) });   // UPDATE
-      avisar("Producto actualizado");
+    if (editingId !== null) {
+      await api(`/${editingId}`, { method: "PUT", body: JSON.stringify(data) });
+      notify("Product updated");
     } else {
-      await api("", { method: "POST", body: JSON.stringify(datos) });                // CREATE
-      avisar("Producto creado");
+      await api("", { method: "POST", body: JSON.stringify(data) });
+      notify("Product created");
     }
     el.dialog.close();
-    await cargarProductos();
+    await loadProducts();
   } catch (err) {
-    avisar("No se pudo guardar el producto. Revisa que el backend esté corriendo.", true);
+    notify("Could not save the product. Make sure the backend is running.", true);
   }
 }
 
-async function eliminarProducto(p) {
-  if (!confirm(`¿Eliminar “${p.nombre}”? Esta acción no se puede deshacer.`)) return;
+async function deleteProduct(p) {
+  if (!confirm(`Delete “${p.name}”? This action cannot be undone.`)) return;
   try {
-    await api(`/${p.id}`, { method: "DELETE" });                                     // DELETE
-    avisar("Producto eliminado");
-    await cargarProductos();
+    await api(`/${p.id}`, { method: "DELETE" });
+    notify("Product deleted");
+    await loadProducts();
   } catch (err) {
-    avisar("No se pudo eliminar el producto.", true);
+    notify("Could not delete the product.", true);
   }
 }
 
-// ---- Aviso temporal ----
-let temporizadorAviso;
-function avisar(texto, esError = false) {
-  el.toast.textContent = texto;
-  el.toast.classList.toggle("is-error", esError);
+// ---------------- Toast ----------------
+let toastTimer;
+function notify(text, isError = false) {
+  el.toast.textContent = text;
+  el.toast.classList.toggle("is-error", isError);
   el.toast.classList.add("is-visible");
-  clearTimeout(temporizadorAviso);
-  temporizadorAviso = setTimeout(() => el.toast.classList.remove("is-visible"), 3500);
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.toast.classList.remove("is-visible"), 3500);
 }
 
-// ============================================================
-//  Eventos
-// ============================================================
-el.input.addEventListener("input", actualizarSugerencias);
-el.input.addEventListener("focus", actualizarSugerencias);
-el.input.addEventListener("blur", ocultarSugerencias);
+// ---------------- Events ----------------
+el.input.addEventListener("input", updateSuggestions);
+el.input.addEventListener("focus", updateSuggestions);
+el.input.addEventListener("blur", hideSuggestions);
 
 el.input.addEventListener("keydown", (e) => {
-  if (e.key === "ArrowDown") { e.preventDefault(); moverSeleccion(1); }
-  else if (e.key === "ArrowUp") { e.preventDefault(); moverSeleccion(-1); }
-  else if (e.key === "Escape") { ocultarSugerencias(); }
-  else if (e.key === "Enter" && indiceActivo >= 0) {
+  if (e.key === "ArrowDown") { e.preventDefault(); moveSelection(1); }
+  else if (e.key === "ArrowUp") { e.preventDefault(); moveSelection(-1); }
+  else if (e.key === "Escape") { hideSuggestions(); }
+  else if (e.key === "Enter" && activeIndex >= 0) {
     e.preventDefault();
-    elegirSugerencia(sugerencias[indiceActivo]);
+    selectSuggestion(suggestions[activeIndex]);
   }
 });
 
 el.form.addEventListener("submit", (e) => {
   e.preventDefault();
-  buscar();
+  search();
 });
 
-el.clearSearch.addEventListener("click", limpiarBusqueda);
-el.addBtn.addEventListener("click", () => abrirFormulario());
+el.clearSearch.addEventListener("click", clearSearch);
+el.addBtn.addEventListener("click", () => openForm());
 el.cancelBtn.addEventListener("click", () => el.dialog.close());
-el.productForm.addEventListener("submit", guardarProducto);
+el.productForm.addEventListener("submit", saveProduct);
 
-// Cerrar el formulario al hacer clic fuera de la tarjeta
+// Close the dialog when clicking the backdrop.
 el.dialog.addEventListener("click", (e) => {
   if (e.target === el.dialog) el.dialog.close();
 });
 
-// ---------------- Inicio ----------------
-cargarProductos();
+loadProducts();
